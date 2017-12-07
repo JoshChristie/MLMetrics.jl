@@ -449,11 +449,55 @@ function f_score(targets::AbstractVector,
     (1+β²)*tp / ((1+β²)*tp + β²*fn + fp)
 end
 
+# Micro averaging multiclass
+function f_score(targets::AbstractVector,
+                 outputs::AbstractArray,
+                 encoding::LabelEncoding,
+                 avgmode::AvgMode.Micro,
+                 β::Number = 1.0)
+    r = true_positive_rate(targets, outputs, avgmode = avgmode)
+    p = positive_predictive_value(targets, outputs, avgmode = avgmode)
+    β² = abs2(β)
+    ((1+β²)*(p*r)) / (β²*(p+r))
+end
+
+# Macro averaging multiclass
+function f_score(targets::AbstractVector,
+                 outputs::AbstractArray,
+                 encoding::LabelEncoding,
+                 avgmode::AverageMode,
+                 β::Number = 1.0)
+    @_dimcheck length(targets) == length(outputs)
+    labels = label(encoding)
+    n = length(labels)
+    ovr = [LabelEnc.OneVsRest(l) for l in labels]
+    precision_ = zeros(n)
+    recall_ = zeros(n)
+    @inbounds for j = 1:n
+        precision_[j] = positive_predictive_value(targets, outputs, ovr[j])
+        recall_[j] = true_positive_rate(targets, outputs, ovr[j])
+    end
+    β² = abs2(β)
+    scores = ((1 .+ β²) .* (precision_ .* recall_)) ./ (β² .* (precision_ .+ recall_))
+    aggregate_score(scores, labels, avgmode)
+end
+
+
+function f_score(targets::AbstractVector,
+                 outputs::AbstractArray,
+                 encoding::LabelEncoding,
+                 β::Number = 1.0)
+    f_score(targets, outputs, encoding, AvgMode.None(), β)
+end
+
 f_score(targets, outputs, labels::AbstractVector, args...) =
     f_score(targets, outputs, LabelEnc.NativeLabels(labels), args...)
 
 f_score(targets, outputs, β::Number = 1.0) =
-    f_score(targets, outputs, comparemode(targets, outputs), β)
+    f_score(targets, outputs, comparemode(targets, outputs), AvgMode.None(), β)
+
+f_score(targets, outputs, avgmode::AverageMode) =
+    f_score(targets, outputs, comparemode(targets, outputs), avgmode, 1.0)
 
 """
     f1_score(target, output, [encoding]) -> Float64
@@ -462,6 +506,11 @@ Same as [`f_score`](@ref), but with `β` fixed to 1.
 """
 f1_score(target, output) = f_score(target, output, 1.0)
 f1_score(target, output, enc) = f_score(target, output, enc, 1.0)
+f1_score(target, output, enc, avgmode::AverageMode) = f_score(target, output, enc, avgmode, 1.0)
+
+aggregate_score(score, labels, ::AvgMode.None) = Dict(Pair.(labels, score))
+aggregate_score(score, labels, ::AvgMode.Macro) = mean(score)
+aggregate_score(score, labels, ::AvgMode.Micro) = error("AvgMode.Micro is undetermined for this")
 
 # --------------------------------------------------------------------
 

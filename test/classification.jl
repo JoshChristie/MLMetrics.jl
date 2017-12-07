@@ -75,15 +75,36 @@ for (fun, mask) = ((true_positives,  (0,0,0,1)),
     end
 end
 
-#=
-@testset "multiclass sanity check" begin
-    # We count positive strickly positive matches as positives
-    @test true_positives([1,2,3,4], [1,3,2,4]) === 2
-    @test true_negatives([1,2,3,4], [4,3,2,1]) === 0
-    @test accuracy([1,2,3,4], [1,3,2,4]) === .5
-    @test accuracy([:a,:b,:b,:c], [:c,:b,:a,:a]) === .25
-end
-=#
+y_true = [0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2]
+y_pred = [0, 1, 0, 1, 0, 1, 0, 1, 2, 2, 1]
+
+@test f_score(y_true, y_pred) == Dict{Int, Float64}(0 => 0.5714285714285715, 1 => 0.6, 2=>0.8)
+@test f_score(y_true, y_pred, AvgMode.Macro()) ≈ 0.6571428571428571
+@test f_score(y_true, y_pred, AvgMode.Micro()) ≈ 0.6363636363636364
+@test f_score(y_true, y_pred, LabelEnc.NativeLabels(unique(y_true)), AvgMode.Micro()) ≈ 0.6363636363636364
+
+
+# n [32]: f1_score(y_true, y_pred, average = 'macro')
+# Out[32]: 0.65714285714285714
+
+# In [33]: f1_score(y_true, y_pred, average = 'micro')
+# Out[33]: 0.63636363636363635
+
+# In [35]: f1_score(y_true, y_pred, average = 'weighted')
+# Out[35]: 0.64675324675324675
+
+# In [36]: f1_score(y_true, y_pred, average = None)
+# Out[36]: array([ 0.57142857,  0.6       ,  0.8       ])
+
+
+# @testset "multiclass sanity check" begin
+#     # We count positive strickly positive matches as positives
+#     @test true_positives([1,2,3,4], [1,3,2,4]) === 2
+#     @test true_negatives([1,2,3,4], [4,3,2,1]) === 0
+#     @test accuracy([1,2,3,4], [1,3,2,4]) === .5
+#     @test accuracy([:a,:b,:b,:c], [:c,:b,:a,:a]) === .25
+# end
+
 _accuracy_nonorm(t,o,m) = accuracy(t,o,m, normalize=false)
 for (fun, ref) = ((true_positives,  5),
                   (true_negatives,  4),
