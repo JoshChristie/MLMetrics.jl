@@ -395,7 +395,7 @@ end
 # --------------------------------------------------------------------
 
 """
-    f_score(targets, outputs, [encoding], [β = 1]) -> Float64
+    f_score(targets, outputs, [encoding], [avgmode], [β = 1]) -> Float64
 
 Compute the F-score for the `outputs` given the `targets`.
 The F-score is a measure for accessing the quality of binary
@@ -449,7 +449,7 @@ function f_score(targets::AbstractVector,
     (1+β²)*tp / ((1+β²)*tp + β²*fn + fp)
 end
 
-# Micro averaging multiclass
+# Micro averaging multiclass f-score
 function f_score(targets::AbstractVector,
                  outputs::AbstractArray,
                  encoding::LabelEncoding,
@@ -461,7 +461,7 @@ function f_score(targets::AbstractVector,
     ((1+β²)*(p*r)) / (β²*(p+r))
 end
 
-# Macro averaging multiclass
+# Macro averaging multiclass f-score
 function f_score(targets::AbstractVector,
                  outputs::AbstractArray,
                  encoding::LabelEncoding,
@@ -474,14 +474,13 @@ function f_score(targets::AbstractVector,
     precision_ = zeros(n)
     recall_ = zeros(n)
     @inbounds for j = 1:n
+        recall_[j] = true_positive_rate(targets, outputs, ovr[j])       
         precision_[j] = positive_predictive_value(targets, outputs, ovr[j])
-        recall_[j] = true_positive_rate(targets, outputs, ovr[j])
     end
     β² = abs2(β)
-    scores = ((1 .+ β²) .* (precision_ .* recall_)) ./ (β² .* (precision_ .+ recall_))
+    scores = ((1.0 .+ β²) .* (precision_ .* recall_)) ./ (β² .* (precision_ .+ recall_))
     aggregate_score(scores, labels, avgmode)
 end
-
 
 function f_score(targets::AbstractVector,
                  outputs::AbstractArray,
@@ -500,17 +499,19 @@ f_score(targets, outputs, avgmode::AverageMode) =
     f_score(targets, outputs, comparemode(targets, outputs), avgmode, 1.0)
 
 """
-    f1_score(target, output, [encoding]) -> Float64
+    f1_score(targets, outputs, [encoding], [avgmode])
 
 Same as [`f_score`](@ref), but with `β` fixed to 1.
 """
-f1_score(target, output) = f_score(target, output, 1.0)
-f1_score(target, output, enc) = f_score(target, output, enc, 1.0)
-f1_score(target, output, enc, avgmode::AverageMode) = f_score(target, output, enc, avgmode, 1.0)
+f1_score(targets, outputs) = f_score(targets, outputs, 1.0)
+f1_score(targets, outputs, enc) = f_score(targets, outputs, enc, 1.0)
+f1_score(targets, outputs, avgmode::AverageMode) = f_score(targets, outputs, avgmode)
+f1_score(targets, outputs, enc, avgmode::AverageMode) = f_score(targets, outputs, enc, avgmode, 1.0)
+
 
 aggregate_score(score, labels, ::AvgMode.None) = Dict(Pair.(labels, score))
 aggregate_score(score, labels, ::AvgMode.Macro) = mean(score)
-aggregate_score(score, labels, ::AvgMode.Micro) = error("AvgMode.Micro is undetermined for this")
+aggregate_score(score, labels, ::AvgMode.Micro) = error("AvgMode.Micro is undetermined.")
 
 # --------------------------------------------------------------------
 
@@ -649,6 +650,26 @@ function matthews_corrcoef(target, output)
     fn = false_negatives(target, output)
     numerator = (tp * tn) - (fp * fn)
     denominator = (tp + fp) * (tp + fn) * (tn + fp) * (tn + fn)
-    return(numerator / (denominator ^ 0.5))
+    mcc = numerator / (denominator ^ 0.5)
+    return mcc
 end
 
+function kappa(target, output)
+    tp = true_positives(target, output)
+    tn = true_negatives(target, output)
+    fp = false_positives(target, output)
+    fn = false_negatives(target, output)
+    total = (tp + tn + fp + fn)
+    total_accuracy = (tp + tn) / (tp + tn + fp + fn)
+    random_accuracy = ((tn + fp) * (tn + fn) + (fn + tp) * (fp + tp)) / (total*total)
+    kappa = (total_accuracy - random_accuracy) / (1 - random_accuracy)
+    return kappa
+end
+
+# multi-class matthew correlation coef
+
+# kappa
+
+# Compute micro-average ROC 
+# Compute macro-average ROC 
+# Compute ROC curve and ROC area for each class

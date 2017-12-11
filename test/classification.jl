@@ -75,6 +75,7 @@ for (fun, mask) = ((true_positives,  (0,0,0,1)),
     end
 end
 
+using MLMetrics, Base.Test
 y_true = [0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2]
 y_pred = [0, 1, 0, 1, 0, 1, 0, 1, 2, 2, 1]
 
@@ -83,6 +84,18 @@ y_pred = [0, 1, 0, 1, 0, 1, 0, 1, 2, 2, 1]
 @test f_score(y_true, y_pred, AvgMode.Micro()) ≈ 0.6363636363636364
 @test f_score(y_true, y_pred, LabelEnc.NativeLabels(unique(y_true)), AvgMode.Micro()) ≈ 0.6363636363636364
 
+
+target = [1, 1, 1, 1, 1, 1, 0, 0, 0, 0]
+output = [1, 1, 1, 1, 0, 0, 1, 0, 0, 0]
+
+@test kappa(target, output) ≈ 0.4
+
+tp = 65
+tn = 825
+fp = 35
+fn = 75
+
+# TODO test mcc
 
 # n [32]: f1_score(y_true, y_pred, average = 'macro')
 # Out[32]: 0.65714285714285714
