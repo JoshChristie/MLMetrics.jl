@@ -433,7 +433,7 @@ julia> f_score([1,0,0,1,1], [1,-1,-1,-1,1], LabelEnc.FuzzyBinary())
 ```
 """
 function f_score(targets::AbstractVector,
-                 outputs::AbstractArray,
+                 outputs::AbstractVector,
                  encoding::BinaryLabelEncoding,
                  β::Number = 1.0)
     @_dimcheck length(targets) == length(outputs)
@@ -451,7 +451,7 @@ end
 
 # Micro averaging multiclass f-score
 function f_score(targets::AbstractVector,
-                 outputs::AbstractArray,
+                 outputs::AbstractVector,
                  encoding::LabelEncoding,
                  avgmode::AvgMode.Micro,
                  β::Number = 1.0)
@@ -463,7 +463,7 @@ end
 
 # Macro averaging multiclass f-score
 function f_score(targets::AbstractVector,
-                 outputs::AbstractArray,
+                 outputs::AbstractVector,
                  encoding::LabelEncoding,
                  avgmode::AverageMode,
                  β::Number = 1.0)
@@ -483,7 +483,7 @@ function f_score(targets::AbstractVector,
 end
 
 function f_score(targets::AbstractVector,
-                 outputs::AbstractArray,
+                 outputs::AbstractVector,
                  encoding::LabelEncoding,
                  β::Number = 1.0)
     f_score(targets, outputs, encoding, AvgMode.None(), β)
@@ -654,7 +654,10 @@ function matthews_corrcoef(target, output)
     return mcc
 end
 
-function kappa(target, output)
+function cohens_kappa_score(targets::AbstractVector,
+                            outputs::AbstractVector,
+                            encoding::LabelEncoding,
+                            avgmode::AverageMode)
     tp = true_positives(target, output)
     tn = true_negatives(target, output)
     fp = false_positives(target, output)

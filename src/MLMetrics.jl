@@ -34,6 +34,7 @@ export
     true_negative_rate, specificity,
     accuracy,
     f_score, f1_score,
+    cohens_kappa_score,
 
     absolute_error,
     percent_error,
